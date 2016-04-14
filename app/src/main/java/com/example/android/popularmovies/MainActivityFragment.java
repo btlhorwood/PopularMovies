@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
@@ -14,8 +13,6 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
-import android.widget.ListAdapter;
-import android.widget.TextView;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,12 +23,13 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import java.util.zip.Inflater;
 
-import static android.net.Uri.parse;
 import com.squareup.picasso.Picasso;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 
 /**
@@ -40,6 +38,8 @@ import com.squareup.picasso.Picasso;
 public class MainActivityFragment extends Fragment {
 
     private TmdbImageArrayAdapter mAdapter;
+    private String mBaseImageUrl = "";
+    private List<String> mPosterSizes = new ArrayList<String>();
 
     public MainActivityFragment() {
     }
@@ -65,19 +65,9 @@ public class MainActivityFragment extends Fragment {
         return rootView;
     }
 
-    public class MovieItem {
-        private final int id;
-        private final String imagePath;
-        public MovieItem(int id, String imagePath) {
-            this.id = id;
-            this.imagePath = imagePath;
-        }
-        public String getImagePath() {
-            return imagePath;
-        }
-        public int getId() {
-            return id;
-        }
+    private Integer getWidthInteger(int position) {
+        String str = mPosterSizes.get(position);
+        return Integer.parseInt(str.substring(1));
     }
 
     public class TmdbImageArrayAdapter extends ArrayAdapter<MovieItem> {
@@ -88,6 +78,7 @@ public class MainActivityFragment extends Fragment {
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
+            final int SIZE_INDEX = 1;
             LayoutInflater inflater = getActivity().getLayoutInflater();
             View view;
             if (convertView == null) {
@@ -99,8 +90,10 @@ public class MainActivityFragment extends Fragment {
             MovieItem item = getItem(position);
             ImageView imageView = (ImageView)view.findViewById(R.id.imageView);
 
-            Picasso.with(getActivity()).load("http://i.imgur.com/DvpvklR.png").into(imageView);
-
+            Resources resources = getResources();
+            Uri imageUri = Uri.parse(mBaseImageUrl+mPosterSizes.get(SIZE_INDEX)+item.getPosterPath()).buildUpon().build();
+            Picasso.with(getActivity()).load(imageUri).into(imageView);
+            imageView.setAdjustViewBounds(true);
             return view;
         }
     }
@@ -116,6 +109,9 @@ public class MainActivityFragment extends Fragment {
 
         @Override
         protected MovieItem[] doInBackground(Void... params) {
+
+            if (mBaseImageUrl.isEmpty())
+                setConfigurationVariables();
 
             Resources resources = getResources();
             String baseRequest = "http://api.themoviedb.org/3/movie/popular";
@@ -133,9 +129,46 @@ public class MainActivityFragment extends Fragment {
             return movieItems;
         }
 
+        private void setConfigurationVariables() {
+            Resources resources = getResources();
+            String baseRequest = "http://api.themoviedb.org/3/configuration";
+            Uri.Builder builder = Uri.parse(baseRequest).buildUpon();
+            builder.appendQueryParameter("api_key", resources.getString(R.string.tmdb_api_key));
+            try {
+                URL url = new URL(builder.build().toString());
+                String reply = getHttpReply(url);
+                if (reply != null) {
+                    JSONObject jsonObject = new JSONObject(reply);
+                    JSONObject jsonImages = jsonObject.getJSONObject("images");
+                    mBaseImageUrl = jsonImages.getString("base_url");
+                    JSONArray sizeArray = jsonImages.getJSONArray("poster_sizes");
+                    mPosterSizes.clear();
+                    for (int i = 0; i < sizeArray.length(); i++) {
+                        mPosterSizes.add(sizeArray.getString(i));
+                    }
+                }
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
         private MovieItem[] parseMovies(String jsonReply) {
-            MovieItem[] movies = new MovieItem[] { new MovieItem(10,"blah.jpg")};
-            return movies;
+            List<MovieItem> results = new ArrayList<MovieItem>();
+            try {
+                JSONObject json = new JSONObject(jsonReply);
+                JSONArray resultArray = json.getJSONArray("results");
+                for (int i = 0; i < resultArray.length(); i++) {
+                    MovieItem movieItem = new MovieItem(resultArray.getJSONObject(i));
+                    results.add(movieItem);
+                }
+
+            } catch (JSONException jse) {
+                jse.printStackTrace();
+            }
+            MovieItem[] resultArray = new MovieItem[results.size()];
+            return results.toArray(resultArray);
         }
 
         /**
