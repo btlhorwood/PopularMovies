@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.preference.Preference;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
@@ -61,9 +62,6 @@ public class MainActivityFragment extends Fragment {
 
         gridView.setAdapter(mAdapter);
 
-
-        new FetchMoviesTask().execute(getSortMethod());
-
         return rootView;
     }
 
@@ -73,6 +71,13 @@ public class MainActivityFragment extends Fragment {
         return sharedPref.getString(
                 resources.getString(R.string.pref_sort_key),
                 resources.getString(R.string.popular));
+    }
+
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        new FetchMoviesTask().execute(getSortMethod());
     }
 
     public class TmdbImageArrayAdapter extends ArrayAdapter<MovieItem> {
@@ -232,4 +237,5 @@ public class MainActivityFragment extends Fragment {
             return (buffer == null) ? "" : buffer.toString();
         }
     }
+
 }
