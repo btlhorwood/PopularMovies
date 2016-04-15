@@ -1,5 +1,7 @@
 package com.example.android.popularmovies;
 
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -12,7 +14,7 @@ import java.util.List;
 /**
  * Created by Ben on 15/04/2016.
  */
-public class MovieItem {
+public class MovieItem implements Parcelable {
 
     private Integer id;
     private String posterPath;
@@ -50,6 +52,60 @@ public class MovieItem {
             Log.e(getClass().getName(), "Error creating MovieItem", e);
         }
     }
+
+    public MovieItem(Parcel in) {
+        id = in.readInt();
+        posterPath = in.readString();
+        adult = in.readInt() == 1 ? true : false;
+        overview = in.readString();
+        releaseDate = in.readString();
+        in.readList(genreList, Integer.class.getClassLoader());
+        originalTitle = in.readString();
+        originalLanguage = in.readString();
+        title = in.readString();
+        backdropPath = in.readString();
+        popularity = in.readDouble();
+        voteCount = in.readInt();
+        video = in.readInt() == 1 ? true : false;
+        voteAverage = in.readDouble();
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeInt(id);
+        dest.writeString(posterPath);
+        dest.writeInt(adult ? 1 : 0);
+        dest.writeString(overview);
+        dest.writeString(releaseDate);
+        dest.writeList(genreList);
+        dest.writeString(originalTitle);
+        dest.writeString(originalLanguage);
+        dest.writeString(title);
+        dest.writeString(backdropPath);
+        dest.writeDouble(popularity);
+        dest.writeInt(voteCount);
+        dest.writeInt(video?1:0);
+        dest.writeDouble(voteAverage);
+
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+
+    static final Parcelable.Creator<MovieItem> CREATOR
+            = new Parcelable.Creator<MovieItem>() {
+
+        public MovieItem createFromParcel(Parcel in) {
+            return new MovieItem(in);
+        }
+
+        public MovieItem[] newArray(int size) {
+            return new MovieItem[size];
+        }
+    };
 
     private List<Integer> parseGenreIds(JSONArray jsonArray) {
         List<Integer> ids = new  ArrayList<Integer>();
@@ -120,7 +176,5 @@ public class MovieItem {
     public Double getVoteAverage() {
         return voteAverage;
     }
-
-
 
 }

@@ -1,6 +1,7 @@
 package com.example.android.popularmovies;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.net.Uri;
@@ -13,6 +14,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
@@ -62,6 +64,16 @@ public class MainActivityFragment extends Fragment {
 
         gridView.setAdapter(mAdapter);
 
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                MovieItem item = mAdapter.getItem(position);
+                Intent intent = new Intent(getActivity(), MovieDetailsActivity.class);
+                intent.putExtra("movie", item);
+                intent.putExtra("image_url", mBaseImageUrl);
+                getActivity().startActivity(intent);
+            }
+        });
         return rootView;
     }
 
@@ -101,7 +113,7 @@ public class MainActivityFragment extends Fragment {
             ImageView imageView = (ImageView)view.findViewById(R.id.imageView);
 
             Resources resources = getResources();
-            Uri imageUri = Uri.parse(mBaseImageUrl+"w185"+item.getPosterPath()).buildUpon().build();
+            Uri imageUri = Uri.parse(mBaseImageUrl+MainActivity.IMAGE_SIZE_STR+item.getPosterPath()).buildUpon().build();
             Picasso.with(getActivity()).load(imageUri).into(imageView);
             imageView.setAdjustViewBounds(true);
             return view;
