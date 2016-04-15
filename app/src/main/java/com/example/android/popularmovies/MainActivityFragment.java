@@ -1,9 +1,11 @@
 package com.example.android.popularmovies;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
@@ -39,7 +41,6 @@ public class MainActivityFragment extends Fragment {
 
     private TmdbImageArrayAdapter mAdapter;
     private String mBaseImageUrl = "";
-    private List<String> mPosterSizes = new ArrayList<String>();
 
     public MainActivityFragment() {
     }
@@ -60,14 +61,18 @@ public class MainActivityFragment extends Fragment {
 
         gridView.setAdapter(mAdapter);
 
-        new FetchMoviesTask().execute();
+
+        new FetchMoviesTask().execute(getSortMethod());
 
         return rootView;
     }
 
-    private Integer getWidthInteger(int position) {
-        String str = mPosterSizes.get(position);
-        return Integer.parseInt(str.substring(1));
+    private String getSortMethod() {
+        Resources resources = getResources();
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        return sharedPref.getString(
+                resources.getString(R.string.pref_sort_key),
+                resources.getString(R.string.popular));
     }
 
     public class TmdbImageArrayAdapter extends ArrayAdapter<MovieItem> {
@@ -91,7 +96,7 @@ public class MainActivityFragment extends Fragment {
             ImageView imageView = (ImageView)view.findViewById(R.id.imageView);
 
             Resources resources = getResources();
-            Uri imageUri = Uri.parse(mBaseImageUrl+mPosterSizes.get(SIZE_INDEX)+item.getPosterPath()).buildUpon().build();
+            Uri imageUri = Uri.parse(mBaseImageUrl+"w185"+item.getPosterPath()).buildUpon().build();
             Picasso.with(getActivity()).load(imageUri).into(imageView);
             imageView.setAdjustViewBounds(true);
             return view;
@@ -99,7 +104,7 @@ public class MainActivityFragment extends Fragment {
     }
 
 
-    public class FetchMoviesTask extends AsyncTask<Void, Void, MovieItem[]> {
+    public class FetchMoviesTask extends AsyncTask<String, Void, MovieItem[]> {
         @Override
         protected void onPostExecute(MovieItem[] movieItems) {
             mAdapter.clear();
@@ -108,13 +113,19 @@ public class MainActivityFragment extends Fragment {
         }
 
         @Override
-        protected MovieItem[] doInBackground(Void... params) {
+        protected MovieItem[] doInBackground(String... params) {
+
+            if (params.length != 1)
+                return null;
 
             if (mBaseImageUrl.isEmpty())
                 setConfigurationVariables();
 
             Resources resources = getResources();
-            String baseRequest = "http://api.themoviedb.org/3/movie/popular";
+
+            String sortOrder = params[0].equals(resources.getString(R.string.popular)) ? "popular" : "top_rated";
+
+            String baseRequest = "http://api.themoviedb.org/3/movie/"+sortOrder;
             Uri.Builder builder = Uri.parse(baseRequest).buildUpon();
             builder.appendQueryParameter("api_key", resources.getString(R.string.tmdb_api_key));
             MovieItem[] movieItems = null;
@@ -141,16 +152,12 @@ public class MainActivityFragment extends Fragment {
                     JSONObject jsonObject = new JSONObject(reply);
                     JSONObject jsonImages = jsonObject.getJSONObject("images");
                     mBaseImageUrl = jsonImages.getString("base_url");
-                    JSONArray sizeArray = jsonImages.getJSONArray("poster_sizes");
-                    mPosterSizes.clear();
-                    for (int i = 0; i < sizeArray.length(); i++) {
-                        mPosterSizes.add(sizeArray.getString(i));
-                    }
                 }
             } catch (MalformedURLException e) {
+                Log.e(getClass().getName(), "MalformedUrlException", e);
                 e.printStackTrace();
             } catch (JSONException e) {
-                e.printStackTrace();
+                Log.e(getClass().getName(), "JSONException", e);
             }
         }
 
