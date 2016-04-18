@@ -95,8 +95,7 @@ public class MovieItem implements Parcelable {
     }
 
 
-    static final Parcelable.Creator<MovieItem> CREATOR
-            = new Parcelable.Creator<MovieItem>() {
+    static final Parcelable.Creator<MovieItem> CREATOR = new Parcelable.Creator<MovieItem>() {
 
         public MovieItem createFromParcel(Parcel in) {
             return new MovieItem(in);
